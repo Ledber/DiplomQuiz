@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+	<!-- <base href="/"> -->
+	{% load static %}
+	<title>Simple Starter</title>
+	<meta name="description" content="Simple Starter Description">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<link rel="icon" href="{% static 'images/favicon.png' %}">
+	<meta property="og:image" content=" {% static 'images/preview.jpg' %}">
+
+	<link rel="stylesheet" href="{% static 'libs/bootstrap/css/bootstrap-reboot.min.css' %}">
+	<link rel="stylesheet" href="{% static 'libs/bootstrap/css/bootstrap-grid.min.css' %}">
+
+	<link rel="stylesheet" href="{% static 'css/main.css' %}">
+	<link rel="stylesheet" href="{% static 'css/media.css' %}">
+
+	<script src="{% static 'libs/jquery/jquery-3.6.0.min.js' %}" defer></script>
+	<script src="{% static 'JS/three.min.js' %}" defer></script>
+	<script src="{% static 'JS/vanta.net.min.js' %}" defer></script>
+	<script src="{% static 'JS/auto.js' %}" defer></script>
+	<script src="{% static 'JS/script.js' %}" defer></script>
+
+	<script type="text/javascript" src="{% static 'JS/ClientSender.js' %}"></script>
+
+
+</head>
+
+<body onload="" class="auto" id="auto">
+
+	<script>
+
+		localStorage.finalResult = 0;
+		localStorage.countQuestion = 0;
+		localStorage.scoreFinal = 0;
+		localStorage.timeLeft = "";
+		
+		let question = [];
+		let answer = [];
+		let is_correct_answer = [];
+		let score_array = [];
+
+		let numberQuestion;
+		let numberQuestionNow = 0;
+		var questions;
+		var fiveMinutes = 0;
+		let width;
+
+
+		window.onload = function () {
+			SendJsonMessageGetQuestionEx();
+		};
+
+		function startTimer(NeedTime) {
+
+			fiveMinutes = 60 * NeedTime,
+       		display = document.querySelector('#timer');
+
+    		var start = Date.now(),
+       		diff,
+        	minutes,
+        	seconds;
+   			function timer() {
+
+        		diff = fiveMinutes - (((Date.now() - start) / 1000) | 0);
+
+				hour = (diff /60 /60) | 0;
+        		minutes = ((diff - (hour * 60 * 60)) / 60) | 0;
+        		seconds = (diff % 60) | 0;
+
+
+        		minutes = minutes < 10 ? "0" + minutes : minutes;
+        		seconds = seconds < 10 ? "0" + seconds : seconds;
+				hour = hour < 10 ? "0" + hour : hour;
+
+        		display.textContent = hour + ":" + minutes + ":" + seconds; 
+
+				localStorage.timeLeft = fiveMinutes - diff;
+
+        		if (diff <= 0) {
+					localStorage.timeLeft = NeedTime * 60;
+					saveAnswerQuestion();
+            		window.location.assign("{% url 'result_victorina' %}")
+        		}
+    		};
+    			// we don't want to wait a full second before the timer starts
+    			timer();
+    			setInterval(timer, 1000);
+		}
+
+		
+		function saveAnswerQuestion(){
+			localStorage.setItem('questions',JSON.stringify(question));
+			localStorage.setItem('answers',JSON.stringify(answer));
+			localStorage.setItem('is_correct_answers',JSON.stringify(is_correct_answer));
+			localStorage.setItem('array_score',JSON.stringify(score_array));
+		}
+
+		function SendJsonMessageGetQuestionEx(){
+            let jsonA = JSON.stringify({
+                action: 'GET_QUESTION',
+                victorina: localStorage.idVictorina, 
+            });
+            wsClient.send(jsonA);
+			AwaitResult();
+        }
+
+		function AwaitResult(){
+			let interval = setInterval(()=>{
+				let result = getResultQuery();
+				var resultJSONFormat =  JSON.parse(result);
+				console.log(resultJSONFormat);
+				if (resultJSONFormat.resultQuery == "succ"){
+					clearInterval(interval);
+					questions = resultJSONFormat;
+					numberQuestion = Object.keys(resultJSONFormat.result).length;
+					localStorage.countQuestion = numberQuestion;
+					width = 100/numberQuestion;
+					localStorage.minScoreWin = resultJSONFormat.minScoreWin;
+					seeQuestion(numberQuestionNow);
+					startTimer(questions.timerCount);
+				}
+				else if (resultJSONFormat.resultQuery == "not_succ"){
+					clearInterval(interval);
+					alert('Загрузить вопросы для данной викторы невозможно !');
+					window.location.assign("{% url 'startVictorina' %}")
+				}
+			},500);			
+		}
+
+		function clearAllAnswer(){
+			for (let i = 0; i < 4; i++){
+						let answer = document.getElementById('answer'+(i+1));
+						let question = document.getElementById('answer_question_'+(i+1));
+						question.type = "radio";
+						question.hidden = false;
+						answer.textContent = "Загрузка ответа...";
+			}
+		}
+
+		function seeQuestion(numberQuestionNow){		
+			let title_question = document.getElementById('title-question');	
+			let question1 = document.getElementById('answer_question_1');
+			let question2 = document.getElementById('answer_question_2');
+			let question3 = document.getElementById('answer_question_3');
+			let question4 = document.getElementById('answer_question_4');
+			title_question.textContent = questions.result[numberQuestionNow].Question;
+			switch (questions.result[numberQuestionNow].IdTypeQuestion){
+				case 0:
+					question1.type = "radio";
+					question2.type = "radio";
+					question3.type = "radio";
+					question4.type = "radio";
+					for (let i = 0; i < questions.result[numberQuestionNow].Answers.length; i++){
+						let answer = document.getElementById('answer'+(i+1));
+						answer.textContent = questions.result[numberQuestionNow].Answers[i];
+					}
+					break;
+
+
+				case 1:
+					question1.type = "textarea";
+					question2.type = "radio";
+					question2.hidden = true;
+					question3.hidden = true;
+					question4.hidden = true;
+					question3.type = "radio";
+					question4.type = "radio";
+					question1.classList.add("textQ");
+					for (let i = 0; i < 4; i++){
+						let answer = document.getElementById('answer'+(i+1));
+						answer.hidden = true;
+					}
+					break;
+
+
+				case 2:
+					question1.type = "checkbox";
+					question1.style.position = 'static';
+					question2.type = "checkbox";
+					question2.style.position = 'static';
+					question3.type = "checkbox";
+					question3.style.position = 'static';
+					question4.type = "checkbox";
+					question4.style.position = 'static';
+					for (let i = 0; i < questions.result[numberQuestionNow].Answers.length; i++){
+						let answer = document.getElementById('answer'+(i+1));
+						answer.textContent = questions.result[numberQuestionNow].Answers[i];
+					}
+					break;
+			}
+		}
+
+		function isCorrectAnswer(numberQuestionNow,num){
+			for (let i = 0; i < num; i++){
+				let question = document.getElementById('answer_question_'+(i+1)).checked;
+				if (questions.result[numberQuestionNow].CorrectAnswer[i] == 1 && question == true){
+					localStorage.finalResult++;
+					break;
+				} 
+			}
+		}
+
+		function returnRightAnswers(result,stringEx){
+			let answerResult = ""
+			for (let i = 0; i < 4; i++){
+				if (result.CorrectAnswer[i] == 1){
+					answerResult += result.Answers[i] + stringEx;
+				}
+
+			}
+			return answerResult;
+		}
+
+		function seeAnswer(numberQuestionNow){
+			switch (questions.result[numberQuestionNow].IdTypeQuestion){
+				case 0:
+					for (let i = 0; i < 4; i++){
+						let question = document.getElementById('answer_question_'+(i+1)).checked;
+						if (questions.result[numberQuestionNow].CorrectAnswer[i] == 1 && question == true){
+							localStorage.finalResult++;
+							answer.push(questions.result[numberQuestionNow].Answers[i]);
+							localStorage.scoreFinal = parseInt( localStorage.scoreFinal) + parseInt(questions.result[numberQuestionNow].Score);
+							is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow]," "));
+							score_array.push(questions.result[numberQuestionNow].Score)
+							break;
+						}
+						else if (questions.result[numberQuestionNow].CorrectAnswer[i] == 0 && question == true){
+							answer.push(questions.result[numberQuestionNow].Answers[i]);
+							is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow]," "));
+							score_array.push(0);
+							break;
+						}
+					}
+					break;
+
+
+				case 1:
+				for (let i = 0; i < 1; i++){
+						let question = document.getElementById('answer_question_'+(i+1)).value;
+						if (questions.result[numberQuestionNow].Answers[i] == question){
+							localStorage.finalResult++;
+							answer.push(question);
+							localStorage.scoreFinal = parseInt(localStorage.scoreFinal) + parseInt(questions.result[numberQuestionNow].Score);
+							is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow]," "));
+							score_array.push(questions.result[numberQuestionNow].Score)
+							break;
+						}
+						else {
+							answer.push(question);
+							is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow]," "));
+							score_array.push(0);
+							break;
+						}
+					}
+					break;
+
+
+				case 2:
+					let lengthAnswer = getLenghtAnswerCorrect();
+					let countAnswer = 0;
+					let arrayTrueSelected = [];
+					for (let i = 0; i < 4; i++){
+						let question = document.getElementById('answer_question_'+(i+1)).checked;
+						if (question == true && questions.result[numberQuestionNow].CorrectAnswer[i] == 1){
+							arrayTrueSelected.push(questions.result[numberQuestionNow].Answers[i]);
+							countAnswer++;
+						}
+						else if (questions.result[numberQuestionNow].CorrectAnswer[i] == 0 && question == true){
+							arrayTrueSelected.push(questions.result[numberQuestionNow].Answers[i]);
+						}
+					}
+					let answers = "";
+					if (lengthAnswer == countAnswer && countAnswer ==0 ){
+						localStorage.finalResult++;
+						localStorage.scoreFinal = parseInt( localStorage.scoreFinal) + parseInt(questions.result[numberQuestionNow].Score);
+						for (let i = 0; i < arrayTrueSelected.length;i++){
+							answers += arrayTrueSelected[i] + ",";
+						}
+						answer.push(answers);
+						is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow],","));
+						score_array.push(questions.result[numberQuestionNow].Score);
+					}
+					else if (countAnswer >= Math.round(lengthAnswer/2) && countAnswer != 0){
+						localStorage.finalResult++;
+						localStorage.scoreFinal = parseInt(localStorage.scoreFinal) + parseInt(1);
+						for (let i = 0; i < arrayTrueSelected.length; i++)
+						{
+							answers += arrayTrueSelected[i] + ",";
+						}
+						answer.push(answers);
+						is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow],","));
+						score_array.push(1);
+					}
+					else {
+						for (let i = 0; i < arrayTrueSelected.length;i++){
+							answers += arrayTrueSelected[i] + ",";
+						}
+						answer.push(answers);
+						is_correct_answer.push(returnRightAnswers(questions.result[numberQuestionNow],","));
+						score_array.push(0);
+					}
+					break;
+			}
+		}
+
+		function getLenghtAnswerCorrect(){
+			let count = 0;
+			for (let i = 0 ; i < 4; i++){
+				if (questions.result[numberQuestionNow].CorrectAnswer[i] == 1){
+					count++;
+				}
+			}
+			return count;
+		}
+
+		function nextQuestion(){
+			question.push(questions.result[numberQuestionNow].Question);
+			seeAnswer(numberQuestionNow);
+			progressBarUpdate();
+			if (numberQuestionNow < (numberQuestion-1)){
+				numberQuestionNow++;
+				clearAllAnswer();
+				seeQuestion(numberQuestionNow);
+			}
+			else {
+				saveAnswerQuestion()
+				window.location.assign("{% url 'result_victorina' %}")
+			}
+		}
+
+		function progressBarUpdate(){
+			let bar = document.getElementById('progressBar-line');
+			bar.style.width = width + '%';
+			width = width + 100/numberQuestion;
+		}
+				
+	</script>
+
+	<div class="question-timer" id="timer">
+			00:00:00
+	</div>
+
+	<div class="form-box form-box_question">
+		<div class="quiz" id="quiz">
+			<div class="quiz-header" id="header">
+				<h2 id="title-question" class="title-question"> Загрузка вопроса...</h2>
+			</div>
+		
+		<ul class="quiz-list" id="list">
+			<li>
+				<label class="label-check">
+					<input type="radio" name="answer" id="answer_question_1">
+					<span id="answer1">Ответ...</span>
+				</label>
+			</li>
+			<li>
+				<label class="label-check" >
+					<input type="radio" name="answer" id="answer_question_2">
+					<span id="answer2">Ответ...</span>
+				</label>
+			</li>
+			<li>
+				<label class="label-check" >
+					<input type="radio" name="answer" id="answer_question_3">
+					<span id="answer3">Ответ...</span>
+				</label>
+			</li>
+			<li>
+				<label class="label-check">
+					<input type="checkbox" name="answer" id="answer_question_4">
+					<span id="answer4">Ответ...</span>
+				</label>
+			</li>
+		</ul>
+
+		<button class="quiz-submit submit" onclick="nextQuestion()" id="submit">Ответить</button>
+
+		</div>
+	</div>
+	
+	<div class="progressBar" id="timer">
+		<div id="progressBar-line" class="progressBar-line"></div>
+	</div>
+</body>
+
+</html>
+
+<style>
+	.question-timer{
+		width: 200px;
+		height: 50px;
+		left: 250px;
+		background-color: #fff;
+		bottom: 280px;
+		border-radius: 20px;
+		box-shadow: 0 5px 45px rgba(255,255,255,0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		font-size: 40px;
+		font-weight: 500;
+
+	}
+
+	.progressBar {
+    	background-color: #fff;
+    	top: 280px;
+    	right: 100px;
+    	width: 500px;
+    	height: 10px;
+    	border-radius: 20px;
+	}
+
+	.checkBoxAnswer{
+		position: static;
+		left: 0;
+	}
+
+</style>

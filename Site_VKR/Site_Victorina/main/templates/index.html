@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <title>Simple Starter</title>
+    <meta name="description" content="Simple Starter Description">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<link rel="icon" href="{% static 'images/favicon.png' %}">
+	<meta property="og:image" content="{% static 'images/preview.jpg' %}">
+
+	<link rel="stylesheet" href="{% static 'libs/bootstrap/css/bootstrap-reboot.min.css' %}">
+	<link rel="stylesheet" href="{% static 'libs/bootstrap/css/bootstrap-grid.min.css' %}">
+
+	<link rel="stylesheet" href="{% static 'css/main.css' %}">
+	<link rel="stylesheet" href="{% static 'css/media.css' %}">
+
+	<script src="{% static 'libs/jquery/jquery-3.6.0.min.js' %}" defer></script>
+	<script src="{% static 'JS/three.min.js' %}" defer></script>
+	<script src="{% static 'JS/vanta.globe.min.js' %}" defer></script>
+	<script src="{% static 'JS/common.js' %}" defer></script>
+	<script src="{% static 'JS/node_modules/swup/dist/swup.min.js' %}" defer></script>
+	<script src="{% static 'JS/script.js' %}" defer></script>
+
+
+    <script type="text/javascript" src="{% static 'JS/ClientSender.js' %}"></script>
+
+</head>
+
+    <script>
+
+        function SendJsonMessageEx(){
+            let jsonA = JSON.stringify(
+             { action: 'TESTA', }
+            );
+            wsClient.send(jsonA);
+        }
+
+
+        function SendJsonMessageLogIn(){
+            let jsonA = JSON.stringify({
+                action: 'LOG_IN',
+            });
+            wsClient.send(jsonA);
+        }
+        
+		function CreateAjaxPost(result){
+			$.ajax({
+      		type: "POST",
+      		url: "{% url 'sign_in_user' %}",
+      		data: {
+        		name: result,
+				csrfmiddlewaretoken: '{{ csrf_token }}'
+      		},
+      		success: function () {
+        		window.location.assign("{% url 'student_begin_victorina' %}")
+      			}
+    		});
+			
+		}
+
+    </script>
+
+    <body>
+        <main >
+            <div class="inrto" id="intro">
+            <div class="enter">
+        
+            <div class="des-by-container">
+                <h1 class="intro_h1 des-by">Quiz
+                    <span class="des-by-1" >Quiz</span>
+                    <span class="des-by-2" >Quiz</span>
+                    <span class="des-by-3" >Designed by ledber</span>
+                </h1>
+        </div>
+                <div class="enter-btn">
+                <a href="/LogIn" class="intro_btn">
+                    <span class="intro_btn-text">Начать</span>
+                    <span class="intro_btn-wave"></span>
+                </a>
+            
+            </div>
+            </div>	
+            </div>
+        
+        </main>
+        
+    </body>
+</html>
